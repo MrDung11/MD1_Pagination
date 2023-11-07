@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/4.2.0/firebase.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        .buttons{
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+        .buttons button{
+            margin-bottom: 20px;
+            border: none;
+            padding: 0.4rem 1.2rem;
+            background-color: red;
+            color: white;
+            border-radius: 5px;
+        }
+        #page-number{
+            margin-bottom: 20px;
+            border: none;
+            text-align: center;
+            width: 3rem;
+            border-radius: 5px;
+        }
+        .column{
+            width: 33%;
+            padding: 10px;
+        }
+        .card{
+            box-shadow: 10px 10px 2px 1px #5959f3;
+            background-color: aqua;
+            padding: 10px;
+            text-align: center;
+        }
+    </style>
+    <script src="model/Student.js"></script>
+</head>
+<body>
+<progress value="0" max="100" id="uploader">0%</progress>
+<input onchange="validate()" type="file" value="upload" accept=".jpg" id="fileButton">
+<p id="validate_avatar" style="color: red"></p>
+<p id="validate" style="color: blue"></p>
+<img id="image" src="" alt="">
+
+<p id="validate_name" style="color: red"></p>
+<div class="input-group mb-3">
+    <div class="input-group-prepend">
+        <span class="input-group-text" id="basic-addon1">Name Student</span>
+    </div>
+    <input oninput="validate()" id="name" type="text" class="form-control" placeholder="Name Student" aria-describedby="basic-addon1">
+</div>
+<button id="btn_create" class="btn btn-primary" onclick="createStudent()" disabled>Create Student</button>
+    <div class="container" style="background-color: #c59510">
+        <div class="col-12" style="margin-top: 50px">
+            <div class="row" id="draw-page">
+
+            </div>
+            <div class="buttons">
+                <button onclick="previousPage()" id="prev">Prev</button>
+                <input type="text" id="page-number" readonly>
+                <button onclick="nextPage()" id="next">Next</button>
+            </div>
+        </div>
+    </div>
+<!--upload chaỵ sau-->
+<script src="upload/upload.js"></script>
+    <script>
+        // Quy định số phần tử của page
+        let elementInPage = 2;
+
+        // Số trang
+        let pageNumber = 1;
+
+        let start = 0;
+        let end = elementInPage;
+
+        // Khai bao bien cho Student
+        let id;
+        let avatar;
+        let name;
+        let validate_avatar;
+        let validate_name;
+
+        let listStudent = localStorage.getItem('listStudent');
+        if(listStudent == null){
+            listStudent = [];
+        }else {
+            listStudent = JSON.parse(listStudent);
+        }
+
+        function validate(){
+            avatar = document.getElementById('fileButton').value;
+            name = document.getElementById('name').value;
+            console.log('name==========', name)
+            validate_avatar = document.getElementById('validate_avatar');
+            validate_name = document.getElementById('validate_name');
+            if(avatar===''){
+                validate_avatar.innerHTML = 'Please upload avatar!'
+            }else {
+                validate_avatar.innerHTML = '';
+            }
+            if(name.trim()=== ''){
+                validate_name.innerHTML = 'The name is required!'
+            }else {
+                validate_name.innerHTML = '';
+            }
+            if(validate_name.textContent === '' && validate_avatar.textContent === ''){
+                document.getElementById('btn_create').disabled = false;
+            }else {
+                document.getElementById('btn_create').disabled = true;
+            }
+        }
+
+        function createStudent(){
+            if(listStudent.length === 0){
+                // Nếu chưa có phần tử nào thì id là phần tử đầu
+                id = 1;
+            }else {
+                // id là phần tử kế tiếp của phần tử cuối
+                id = listStudent[listStudent.length - 1].id + 1;
+            }
+            // Lấy avatar từ localStorage
+            avatar = localStorage.getItem('avatar_student');
+            name = document.getElementById('name').value;
+            let newStudent = new Student(id, name, avatar);
+            listStudent.push(newStudent);
+            localStorage.removeItem('listStudent');
+
+            // Lưu lên
+            localStorage.setItem('listStudent', JSON.stringify(listStudent))
+            localStorage.removeItem('avatar_student');
+            document.getElementById('validate').innerHTML = 'Create Student Success!'
+            showPageStudent();
+        }
+
+        // Tạo hàm để next page
+        function nextPage(){
+            if(end < listStudent.length){
+                start += elementInPage;
+                end += elementInPage;
+                pageNumber += 1;
+            }
+            document.getElementById('page-number').value = pageNumber;
+            // Gọi hàm để vẽ ra trang
+            showPageStudent();
+        }
+
+        function previousPage(){
+            if(end <= elementInPage){
+                start = 0;
+                end = elementInPage;
+            }else {
+                start -= elementInPage;
+                end -= elementInPage;
+                pageNumber -= 1;
+            }
+            document.getElementById('page-number').value = pageNumber;
+            // Gọi hàm để vẽ ra trang
+            showPageStudent();
+        }
+
+        function showPageStudent(){
+            // let drawPage = '';
+            // for(let i = 0; i < listStudent.length; i++){
+            //     drawPage += `
+            //                <div class="column">
+            //                     <div class="card">
+            //                         <p>${listStudent[i].id}</p>
+            //                         <p>${listStudent[i].name}</p>
+            //                     </div>
+            //                 </div>
+            //                  `
+            // }
+            // document.getElementById('draw-page').innerHTML = drawPage
+            // Lấy từ id =2 đến phần tử trước của id = 4; Ví dụ: listStudent.slice(2, 4).map((row) bên trên đánh từ id = 1; nên (2, 4) => sẽ lấy Chính, Dũng
+            const pageStudent = listStudent.slice(start, end).map((row)=>{
+                return `
+                            <div class="column">
+                                 <div class="card">
+                                     <p>${row.id}</p>
+                                     <img style="width: auto; height: 200px; border-radius: 15px" src="${row.avatar}" alt="">
+                                     <b style="color: #5959f3">${row.name}</b>
+                                 </div>
+                             </div>
+                        `
+                // console.log('obj ---------->', row)
+            }).join('')
+            console.log('pageStudent ---------->', pageStudent)
+            // Dùng DOM vẽ ra
+            document.getElementById('page-number').value = pageNumber;
+            document.getElementById('draw-page').innerHTML = pageStudent;
+            // console.log('pageStudent ---------->', pageStudent)
+        }
+        showPageStudent();
+    </script>
+</body>
+</html>
